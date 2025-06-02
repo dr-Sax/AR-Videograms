@@ -1,0 +1,25 @@
+
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  </head>
+  <body>
+ <a-scene mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 2" color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">      <a-assets>
+        <img id="mspacman" src="mspacman.png"></a-asset-item>
+        <img id="mrpacman" src="pacman.png"></a-asset-item>
+      </a-assets>
+
+      <a-camera position="0 0 0" look-controls="enabled: false" cursor="fuse: false; rayOrigin: mouse;" raycaster="far: ${customFields.libVersion}; objects: .clickable"></a-camera>
+
+      <a-entity mindar-image-target="targetIndex: 0">
+        <a-plane id="ms-pacman-plane" src="#mspacman" width="1" height="1" position="0 0 0"></a-img>
+      </a-entity>
+      <a-entity mindar-image-target="targetIndex: 1">
+        <a-plane id="mr-pacman-plane" src="#mrpacman" width="1" height="1" position="0 0 0"></a-img>
+      </a-entity>
+    </a-scene>
+  </body>
+</html>
