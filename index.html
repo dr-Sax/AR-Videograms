@@ -70,7 +70,7 @@
           // Set new clipped geometry
           el.setAttribute('geometry', {
             primitive: 'clipped-plane',
-            width: 1,
+            width: 1,                 // these need to be passed in through as attributes instead of hardcoded
             height: 0.5367746288798919,
             points: pointsArray
           });
@@ -140,7 +140,7 @@
   </head>
   <body>
     <a-scene 
-      mindar-image="imageTargetSrc: ./targets.mind; maxTrack: 2" 
+      mindar-image="imageTargetSrc: ./camera-targets.mind; maxTrack: 7" 
       color-space="sRGB" 
       renderer="colorManagement: true, physicallyCorrectLights" 
       vr-mode-ui="enabled: false" 
@@ -162,11 +162,51 @@
         <a-entity
           id="ms-pacman-plane" 
           position="0 0 0"
-          video-clip="points: .34,96, 51,2.2, 99.5,98.2, .34,96; src: #mspacman">
+          video-clip = "points: .34,96, 51,2.2, 99.5,98.2, .34,96; src: #mspacman">
         </a-entity>
       </a-entity>
       
       <a-entity mindar-image-target="targetIndex: 1">
+        <a-entity
+          id="mr-pacman-plane" 
+          position="0 0 0"
+          video-clip="points: 50,10, 70,30, 90,30, 60,50, 75,80, 50,65, 25,80, 40,50, 10,30, 30,30; src: #mrpacman">
+        </a-entity>
+      </a-entity>
+
+      <a-entity mindar-image-target="targetIndex: 2">
+        <a-entity
+          id="mr-pacman-plane" 
+          position="0 0 0"
+          video-clip="points: 50,10, 70,30, 90,30, 60,50, 75,80, 50,65, 25,80, 40,50, 10,30, 30,30; src: #mrpacman">
+        </a-entity>
+      </a-entity>
+
+      <a-entity mindar-image-target="targetIndex: 3">
+        <a-entity
+          id="mr-pacman-plane" 
+          position="0 0 0"
+          video-clip="points: 50,10, 70,30, 90,30, 60,50, 75,80, 50,65, 25,80, 40,50, 10,30, 30,30; src: #mrpacman">
+        </a-entity>
+      </a-entity>
+
+      <a-entity mindar-image-target="targetIndex: 4">
+        <a-entity
+          id="mr-pacman-plane" 
+          position="0 0 0"
+          video-clip="points: 50,10, 70,30, 90,30, 60,50, 75,80, 50,65, 25,80, 40,50, 10,30, 30,30; src: #mrpacman">
+        </a-entity>
+      </a-entity>
+
+      <a-entity mindar-image-target="targetIndex: 5">
+        <a-entity
+          id="mr-pacman-plane" 
+          position="0 0 0"
+          video-clip="points: 50,10, 70,30, 90,30, 60,50, 75,80, 50,65, 25,80, 40,50, 10,30, 30,30; src: #mrpacman">
+        </a-entity>
+      </a-entity>
+
+      <a-entity mindar-image-target="targetIndex: 6">
         <a-entity
           id="mr-pacman-plane" 
           position="0 0 0"
