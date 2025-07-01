@@ -1,14 +1,76 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        /* Lock orientation */
+        -webkit-orientation: landscape;
+        -moz-orientation: landscape;
+        orientation: landscape;
+      }
+      
+      /* Stereoscopic container */
+      .stereo-container {
+        display: flex;
+        flex-direction: column;
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+      }
+      
+      .eye-view {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+      }
+      
+      .left-eye {
+        width: 100%;
+        height: 100%;
+        position: left;
+        overflow: hidden;
+      }
+      .right-eye {
+        width: 100%;
+        height: 100%;
+        position: right;
+        overflow: hidden;
+      }
+      .eye-view canvas {
+        width: 100% !important;
+        height: 100% !important;
+      }
+      
+      /* Optional: Add divider line between views */
+      .divider {
+        position: absolute;
+        left: 100%;
+        top: 0;
+        width: 2px;
+        height: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        z-index: 1000;
+        transform: translateX(-50%);
+      }
+    </style>
 
     <script>
+      // Lock screen orientation on mobile
+      if (screen.orientation && screen.orientation.lock) {
+        screen.orientation.lock('landscape').catch(err => {
+          console.log('Orientation lock failed:', err);
+        });
+      }
+
       // Custom geometry for clipped shapes using point arrays
-      // test change
       AFRAME.registerGeometry('clipped-plane', {
         schema: {
           width: {type: 'number', default: 1},
@@ -71,7 +133,7 @@
           // Set new clipped geometry
           el.setAttribute('geometry', {
             primitive: 'clipped-plane',
-            width: 1,                 // these need to be passed in through as attributes instead of hardcoded
+            width: 1,
             height: 0.5367746288798919,
             points: pointsArray
           });
@@ -97,7 +159,6 @@
           this.el.sceneEl.addEventListener('loaded', () => {
             const videoEl = document.querySelector(videoSelector);
             if (videoEl) {
-              // Force video to load and play
               videoEl.load();
               
               const playVideo = () => {
@@ -105,7 +166,6 @@
                 if (playPromise !== undefined) {
                   playPromise.catch(error => {
                     console.log('Video autoplay prevented:', error);
-                    // Add click handler to start video on user interaction
                     document.addEventListener('click', () => {
                       videoEl.play().catch(e => console.log('Video play failed:', e));
                     }, { once: true });
@@ -126,9 +186,47 @@
           });
         }
       });
-      
+
+      // Stereoscopic camera component
+      AFRAME.registerComponent('stereo-camera', {
+        schema: {
+          eye: {type: 'string', default: 'left'}, // 'left' or 'right'
+          eyeSeparation: {type: 'number', default: 0.064}, // 64mm average IPD
+          convergence: {type: 'number', default: 1.0}
+        },
+        
+        init: function() {
+          const data = this.data;
+          const el = this.el;
+          
+          // Get the camera component
+          const camera = el.getObject3D('camera');
+          if (camera) {
+            // Adjust camera position for stereo effect
+            const offset = data.eyeSeparation / 2;
+            if (data.eye === 'left') {
+              camera.position.x = -offset;
+            } else {
+              camera.position.x = offset;
+            }
+            
+            // Optional: Adjust convergence (toe-in)
+            if (data.eye === 'left') {
+              camera.rotation.y = data.convergence * 0.01;
+            } else {
+              camera.rotation.y = -data.convergence * 0.01;
+            }
+          }
+        }
+      });
+
       // Initialize videos when page loads
       document.addEventListener('DOMContentLoaded', function() {
+        // Prevent zoom and ensure landscape
+        document.addEventListener('touchmove', function(e) {
+          if (e.scale !== 1) { e.preventDefault(); }
+        }, { passive: false });
+        
         // Add user interaction handlers to start videos
         const startVideos = () => {
           const videos = document.querySelectorAll('video');
@@ -142,85 +240,195 @@
 
   </head>
   <body>
-    <a-scene 
-      mindar-image="imageTargetSrc: ./camera-targets.mind; maxTrack: 7" 
-      color-space="sRGB" 
-      renderer="colorManagement: true, physicallyCorrectLights" 
-      vr-mode-ui="enabled: false" 
-      device-orientation-permission-ui="enabled: false">
-      
-      <a-assets>
-        <video id="mspacman" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="bird-flock.mp4"></video>
-        <video id="mrpacman" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="whitney-spirals.mp4"></video>
-        <video id="glasses" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="P-vid.mp4"></video>
-        <video id="duck" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="giant-duck.mp4"></video>
-        <video id="slinky" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="slinking.mp4"></video>
-        <video id="lightplay" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="lightplay.mp4"></video>
+    <div class="stereo-container">
+      <!-- Left Eye View -->
+      <div class="eye-view" id="left-eye">
+        <a-scene 
+          mindar-image="imageTargetSrc: ./camera-targets.mind; maxTrack: 7" 
+          color-space="sRGB" 
+          renderer="colorManagement: true, physicallyCorrectLights" 
+          vr-mode-ui="enabled: false" 
+          device-orientation-permission-ui="enabled: false"
+          embedded
+          style="width: 100%; height: 100%;">
+          
+          <a-assets>
+            <video id="mspacman-left" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="bird-flock.mp4"></video>
+            <video id="mrpacman-left" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="whitney-spirals.mp4"></video>
+            <video id="glasses-left" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="P-vid.mp4"></video>
+            <video id="duck-left" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="giant-duck.mp4"></video>
+            <video id="slinky-left" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="slinking.mp4"></video>
+            <video id="lightplay-left" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="lightplay.mp4"></video>
+          </a-assets>
 
-      </a-assets>
+          <a-camera 
+            position="0 0 0" 
+            look-controls="enabled: false" 
+            cursor="fuse: false; rayOrigin: mouse;" 
+            raycaster="far: 10000; objects: .clickable"
+            stereo-camera="eye: left; eyeSeparation: 0.064">
+          </a-camera>
 
-      <a-camera 
-        position="0 0 0" 
-        look-controls="enabled: false" 
-        cursor="fuse: false; rayOrigin: mouse;" 
-        raycaster="far: 10000; objects: .clickable">
-      </a-camera>
+          <!-- Target 0 -->
+          <a-entity mindar-image-target="targetIndex: 0">
+            <a-entity
+              id="ms-pacman-plane-left" 
+              position="0 0 0"
+              video-clip="points: 13.3,97.43, 40.02,45.18, 92.95,45.72, 66.16,97.32; src: #glasses-left">
+            </a-entity>
+          </a-entity>
+          
+          <!-- Target 1 -->
+          <a-entity mindar-image-target="targetIndex: 1">
+            <a-entity
+              id="mr-pacman-plane-left" 
+              position="0 0 0"
+              video-clip="points: 50,10, 70,30, 90,30, 60,50, 75,80, 50,65, 25,80, 40,50, 10,30, 30,30; src: #mrpacman-left">
+            </a-entity>
+          </a-entity>
 
-      <a-entity mindar-image-target="targetIndex: 0">
-        <a-entity
-          id="ms-pacman-plane" 
-          position="0 0 0"
-          video-clip = "points: 13.3,97.43, 40.02,45.18, 92.95,45.72, 66.16,97.32; src: #glasses">
-        </a-entity>
-      </a-entity>
-      
-      <a-entity mindar-image-target="targetIndex: 1">
-        <a-entity
-          id="mr-pacman-plane" 
-          position="0 0 0"
-          video-clip="points: 50,10, 70,30, 90,30, 60,50, 75,80, 50,65, 25,80, 40,50, 10,30, 30,30; src: #mrpacman">
-        </a-entity>
-      </a-entity>
+          <!-- Target 2 -->
+          <a-entity mindar-image-target="targetIndex: 2">
+            <a-entity
+              id="triangle-plane-left" 
+              position="0 0 0"
+              video-clip="points: 0.77,99.86, 47.71,1.06, 99.78,94.89; src: #lightplay-left">
+            </a-entity>
+          </a-entity>
 
-      <a-entity mindar-image-target="targetIndex: 2">
-        <a-entity
-          id="mr-pacman-plane" 
-          position="0 0 0"
-          video-clip="points: 0.77,99.86, 47.71,1.06, 99.78,94.89; src: #lightplay">
-        </a-entity>
-      </a-entity>
+          <!-- Target 3 -->
+          <a-entity mindar-image-target="targetIndex: 3">
+            <a-entity
+              id="triangle2-plane-left" 
+              position="0 0 0"
+              video-clip="points: .23,99.17, 49.69,1.2, 98.97,97; src: #slinky-left">
+            </a-entity>
+          </a-entity>
 
-      <a-entity mindar-image-target="targetIndex: 3">
-        <a-entity
-          id="mr-pacman-plane" 
-          position="0 0 0"
-          video-clip="points: .23,99.17, 49.69,1.2, 98.97,97; src: #slinky">
-        </a-entity>
-      </a-entity>
+          <!-- Target 4 -->
+          <a-entity mindar-image-target="targetIndex: 4">
+            <a-entity
+              id="triangle3-plane-left" 
+              position="0 0 0"
+              video-clip="points: 12.63,98.82, 48.69,30.01, 84.47,97; src: #duck-left">
+            </a-entity>
+          </a-entity>
 
-      <a-entity mindar-image-target="targetIndex: 4">
-        <a-entity
-          id="mr-pacman-plane" 
-          position="0 0 0"
-          video-clip="points: 12.63,98.82, 48.69,30.01, 84.47,97; src: #duck">
-        </a-entity>
-      </a-entity>
+          <!-- Target 5 -->
+          <a-entity mindar-image-target="targetIndex: 5">
+            <a-entity
+              id="poly-plane5-left" 
+              position="0 0 0"
+              video-clip="points: 50,10, 70,30, 90,30, 60,50, 75,80, 50,65, 25,80, 40,50, 10,30, 30,30; src: #mrpacman-left">
+            </a-entity>
+          </a-entity>
 
-      <a-entity mindar-image-target="targetIndex: 5">
-        <a-entity
-          id="mr-pacman-plane" 
-          position="0 0 0"
-          video-clip="points: 50,10, 70,30, 90,30, 60,50, 75,80, 50,65, 25,80, 40,50, 10,30, 30,30; src: #mrpacman">
-        </a-entity>
-      </a-entity>
+          <!-- Target 6 -->
+          <a-entity mindar-image-target="targetIndex: 6">
+            <a-entity
+              id="poly-plane6-left" 
+              position="0 0 0"
+              video-clip="points: 50,10, 70,30, 90,30, 60,50, 75,80, 50,65, 25,80, 40,50, 10,30, 30,30; src: #mrpacman-left">
+            </a-entity>
+          </a-entity>
+        </a-scene>
+      </div>
 
-      <a-entity mindar-image-target="targetIndex: 6">
-        <a-entity
-          id="mr-pacman-plane" 
-          position="0 0 0"
-          video-clip="points: 50,10, 70,30, 90,30, 60,50, 75,80, 50,65, 25,80, 40,50, 10,30, 30,30; src: #mrpacman">
-        </a-entity>
-      </a-entity>
-    </a-scene>
+      <!-- Right Eye View -->
+      <div class="eye-view" id="right-eye">
+        <a-scene 
+          mindar-image="imageTargetSrc: ./camera-targets.mind; maxTrack: 7" 
+          color-space="sRGB" 
+          renderer="colorManagement: true, physicallyCorrectLights" 
+          vr-mode-ui="enabled: false" 
+          device-orientation-permission-ui="enabled: false"
+          embedded
+          style="width: 100%; height: 100%;">
+          
+          <a-assets>
+            <video id="mspacman-right" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="bird-flock.mp4"></video>
+            <video id="mrpacman-right" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="whitney-spirals.mp4"></video>
+            <video id="glasses-right" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="P-vid.mp4"></video>
+            <video id="duck-right" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="giant-duck.mp4"></video>
+            <video id="slinky-right" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="slinking.mp4"></video>
+            <video id="lightplay-right" autoplay loop muted playsinline crossorigin="anonymous" preload="auto" src="lightplay.mp4"></video>
+          </a-assets>
+
+          <a-camera 
+            position="0 0 0" 
+            look-controls="enabled: false" 
+            cursor="fuse: false; rayOrigin: mouse;" 
+            raycaster="far: 10000; objects: .clickable"
+            stereo-camera="eye: right; eyeSeparation: 0.064">
+          </a-camera>
+
+          <!-- Target 0 -->
+          <a-entity mindar-image-target="targetIndex: 0">
+            <a-entity
+              id="ms-pacman-plane-right" 
+              position="0 0 0"
+              video-clip="points: 13.3,97.43, 40.02,45.18, 92.95,45.72, 66.16,97.32; src: #glasses-right">
+            </a-entity>
+          </a-entity>
+          
+          <!-- Target 1 -->
+          <a-entity mindar-image-target="targetIndex: 1">
+            <a-entity
+              id="mr-pacman-plane-right" 
+              position="0 0 0"
+              video-clip="points: 50,10, 70,30, 90,30, 60,50, 75,80, 50,65, 25,80, 40,50, 10,30, 30,30; src: #mrpacman-right">
+            </a-entity>
+          </a-entity>
+
+          <!-- Target 2 -->
+          <a-entity mindar-image-target="targetIndex: 2">
+            <a-entity
+              id="triangle-plane-right" 
+              position="0 0 0"
+              video-clip="points: 0.77,99.86, 47.71,1.06, 99.78,94.89; src: #lightplay-right">
+            </a-entity>
+          </a-entity>
+
+          <!-- Target 3 -->
+          <a-entity mindar-image-target="targetIndex: 3">
+            <a-entity
+              id="triangle2-plane-right" 
+              position="0 0 0"
+              video-clip="points: .23,99.17, 49.69,1.2, 98.97,97; src: #slinky-right">
+            </a-entity>
+          </a-entity>
+
+          <!-- Target 4 -->
+          <a-entity mindar-image-target="targetIndex: 4">
+            <a-entity
+              id="triangle3-plane-right" 
+              position="0 0 0"
+              video-clip="points: 12.63,98.82, 48.69,30.01, 84.47,97; src: #duck-right">
+            </a-entity>
+          </a-entity>
+
+          <!-- Target 5 -->
+          <a-entity mindar-image-target="targetIndex: 5">
+            <a-entity
+              id="poly-plane5-right" 
+              position="0 0 0"
+              video-clip="points: 50,10, 70,30, 90,30, 60,50, 75,80, 50,65, 25,80, 40,50, 10,30, 30,30; src: #mrpacman-right">
+            </a-entity>
+          </a-entity>
+
+          <!-- Target 6 -->
+          <a-entity mindar-image-target="targetIndex: 6">
+            <a-entity
+              id="poly-plane6-right" 
+              position="0 0 0"
+              video-clip="points: 50,10, 70,30, 90,30, 60,50, 75,80, 50,65, 25,80, 40,50, 10,30, 30,30; src: #mrpacman-right">
+            </a-entity>
+          </a-entity>
+        </a-scene>
+      </div>
+
+      <!-- Optional divider line -->
+      <div class="divider"></div>
+    </div>
   </body>
 </html>
